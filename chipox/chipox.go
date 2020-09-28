@@ -43,6 +43,7 @@ var Counter int
 
 // ErrReadSensor is the error message when reading data fails
 var ErrReadSensor = errors.New("failed to read sensor temperature")
+var O2File string
 
 func main() {
 
@@ -57,24 +58,29 @@ func main() {
 	// create the client; the first chipox device, chipox1
 	chipox1 = proto.NewBlockchainClient(conn)
 
-	files, err := ioutil.ReadDir(metadata.DATADIR)
-	if err != nil {
-		log.Fatalf("No files found in directory, %s", err)
-	}
-
 	// read the file given by Chipox; NOTE: clean this file out after every run
-	O2File := files[0].Name()
-
-	fmt.Println("Chipox1out.csv is:", O2File)
-
-	// create the file for this device for writing
-	if err = addFile(DeviceDataOutputFile); err != nil {
-		log.Fatalf("could not create file from device, %s: ", err)
+	for {
+		time.Sleep(10 * time.Second)
+		files, err := ioutil.ReadDir(metadata.DATADIR)
+		if err != nil {
+			log.Fatalf("Error while reading files in data directory, %s", err)
+		}
+		if len(files) == 0 {
+			fmt.Println("File not yet opened by Chipox")
+			continue
+		} else {
+			O2File := files[0].Name()
+			fmt.Println("Chipox1out.csv is:", O2File)
+			// create the file for this device for writing
+			if err = addFile(DeviceDataOutputFile); err != nil {
+				log.Fatalf("could not create file from device, %s: ", err)
+			}
+			if err := ReadDataFromFile(O2File); err != nil {
+				log.Fatalf("could not read data file from Chipox, %v", err)
+			}
+		}
 	}
 
-	if err := ReadDataFromFile(O2File); err != nil {
-		log.Fatalf("could not read data file from Chipox, %v", err)
-	}
 	// comment out for PEBL testing
 	// startSpinOff() // Start hashing data file and save it to the postgreSQL or FHIR DB
 }
