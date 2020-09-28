@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"chipox/metadata"
@@ -61,7 +62,7 @@ func main() {
 	// read the file given by Chipox; NOTE: clean this file out after every run
 	for {
 		time.Sleep(10 * time.Second)
-		files, err := ioutil.ReadDir(metadata.DATADIR)
+		files, err := ioutil.ReadDir(filepath.Dir(metadata.DATADIR))
 		if err != nil {
 			log.Fatalf("Error while reading files in data directory, %s", err)
 		}
