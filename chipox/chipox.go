@@ -3,14 +3,16 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"time"
 
-	"ecg1/metadata"
-	"ecg1/proto"
+	"chipox/metadata"
+	"chipox/proto"
 
 	//"golang.org/x/net/context"
 	"context"
@@ -21,9 +23,10 @@ import (
 // MACID is the unique identifier of the device
 const MACID = "00-14-22-01-23-45"
 
-var ecg1 proto.BlockchainClient
+var chipox1 proto.BlockchainClient
 
-const deviceFile = metadata.LOCALECG1OUT
+// DeviceDataOutputFile contains the data from the Chipox device
+const DeviceDataOutputFile = metadata.LOCALECG1OUT
 const freq = 500
 const offSet = -freq
 
@@ -33,6 +36,9 @@ var start = 0
 
 // Counter is just for showing block number when transferring data blocks
 var Counter int
+
+// ErrReadSensor is the error message when reading data fails
+var ErrReadSensor = errors.New("failed to read sensor temperature")
 
 func main() {
 
@@ -44,25 +50,36 @@ func main() {
 	}
 	defer conn.Close()
 
-	// create the client; the first ecg device, ecg1
-	ecg1 = proto.NewBlockchainClient(conn)
+	// create the client; the first chipox device, chipox1
+	chipox1 = proto.NewBlockchainClient(conn)
+
+	files, err := ioutil.ReadDir(metadata.DATADIR)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// read the file given by Chipox; NOTE: clean this file out after every run
+	O2File := files[0].Name()
+
+	fmt.Println("Chipox1out.csv is:", O2File)
 
 	// create the file for this device for writing
-	if err = addFile(deviceFile); err != nil {
-		log.Fatalf("could not create file from device, %s: ", MACID)
+	if err = addFile(DeviceDataOutputFile); err != nil {
+		log.Fatalf("could not create file from device, %s: ", err)
 	}
 
-	if err := PrepareSimulation(); err != nil {
-		log.Fatalf("could not prepare data file for simulation, %v", err)
+	if err := ReadDataFromFile(O2File); err != nil {
+		log.Fatalf("could not read data file from Chipox, %v", err)
 	}
 	// comment out for PEBL testing
-	startSpinOff() // Start hashing data file and save it to the postgreSQL or FHIR DB
+	// startSpinOff() // Start hashing data file and save it to the postgreSQL or FHIR DB
 }
 
 // addFile will request the gRPC server to safe a temp file where the data will be captured
+// fileName is arbitrarily set in the metadata file
 func addFile(fileName string) error {
 
-	fileResponse, err := ecg1.AddFile(context.Background(), &proto.AddFileRequest{
+	fileResponse, err := chipox1.AddFile(context.Background(), &proto.AddFileRequest{
 		FileName: fileName,
 	})
 	if err != nil {
@@ -73,55 +90,99 @@ func addFile(fileName string) error {
 	return nil
 }
 
-// PrepareSimulation generates a random ECG file to simulate an ECG device
-func PrepareSimulation() error {
-	ECGfile := metadata.LOCALECGIN0
-	fmt.Println("ecgfile0.csv is:", ECGfile)
+// ReadDataFromFile generates a random ECG file to simulate an ECG device
+// chunks of data are send to the server where the data will be put together
+func ReadDataFromFile(filename string) error {
+	fmt.Println("Entering the ReadDataFromFile function")
+	path := metadata.DATADIR + filename
+	//data, err := ioutil.ReadFile(O2File)
+	//if err != nil {
+	//log.Fatalf("error is: %s", err)
+	//}
+	//input := string(data)
+	//strings.Replace(input, "\r?\n?", "@", -1)
+	// data := lines[offSet+chunk : chunk] // 1st round (-500 + 500) : 500 == 0:500
 
-	// count the number of lines and use this int to loop through the slice
-	TotNoOfLines, err := LineCounter(ECGfile)
-	if err != nil {
-		log.Fatalf("error during line counting of ECGFILE: %s", err)
-	}
-	fmt.Println("Total number of lines in file ECGFILE is: ", TotNoOfLines)
-
-	allLinesInFile, err := scanFileToLines(ECGfile)
-	if err != nil {
-		log.Fatalf("Could not count lines, %s ", err)
-	}
-
+	beginValueOfSlice := 0
 	c := time.Tick(1 * time.Second)
 	for range c {
-		if chunk >= TotNoOfLines {
-			break
+		TotNoOfLines := LineCounter(path)
+		chunkToBeProcessed := TotNoOfLines - beginValueOfSlice
+		fmt.Println("Total number of lines in file ECGFILE is: ", TotNoOfLines)
+		allLinesInFile, err := scanFileToLines(path)
+		if err != nil {
+			log.Fatalf("Could not count lines, %s ", err)
 		}
 
-		chunk = chunk + freq
-		_ = processLines(allLinesInFile, TotNoOfLines, chunk, MACID)
+		_ = ProcessLines(allLinesInFile, TotNoOfLines, chunkToBeProcessed, MACID)
+		beginValueOfSlice = beginValueOfSlice + chunkToBeProcessed
 
 	}
 
 	return nil
 }
+func scanFileToLines(path string) ([]string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
 
-// chunks of data are send to the server where the data will be put together
-func processLines(lines []string, fileSize, chunk int, macid string) error {
+	var lines []string
+
+	// create a scanner and read in all the lines in of file
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	return lines, nil
+}
+
+//LineCounter returns the number of lines found in the file
+func LineCounter(f string) int {
+	chipox, err := os.Open(f)
+	if err != nil {
+		log.Fatalf("could not open file to count lines, %s", err)
+	}
+	buf := make([]byte, 32*1024)
+	count := 0
+	lineSep := []byte{'\n'}
+
+	defer chipox.Close()
+
+	for {
+		c, err := chipox.Read(buf)
+		count += bytes.Count(buf[:c], lineSep)
+
+		switch {
+		case err == io.EOF:
+			return count
+
+		case err != nil:
+			return count
+		}
+	}
+}
+
+// ProcessLines function is used to read a ready file and is not used for life updates
+func ProcessLines(lines []string, fileSize, chunk int, macid string) error {
 	var blockRequests []*proto.AddBlockRequest
 
-	data := lines[offSet+chunk : chunk] // 1st round -500 + 500 : 500 == 0:500
+	data := lines[offSet+chunk : chunk] // 1st round (-500 + 500) : 500 == 0:500
 
 	dataSliceToAdd := proto.AddBlockRequest{
 		Data:     data,
 		Macid:    macid,
-		Filename: deviceFile,
+		Filename: DeviceDataOutputFile,
 	}
 
 	blockRequests = append(blockRequests, &dataSliceToAdd)
 
 	/* --------- Here is where the gRPC and Blockchain magic happens --------- */
-	stream, err := ecg1.AddBlock(context.Background())
+	stream, err := chipox1.AddBlock(context.Background())
 	if err != nil {
-		log.Fatalf("%v.AddBlock(_) = _, %v", ecg1, err)
+		log.Fatalf("%v.AddBlock(_) = _, %v", chipox1, err)
 	}
 
 	for _, block := range blockRequests {
@@ -136,7 +197,7 @@ func processLines(lines []string, fileSize, chunk int, macid string) error {
 }
 
 func startSpinOff() {
-	resp, err := ecg1.StartSpinOff(context.Background(), &proto.SpinOffRequest{
+	resp, err := chipox1.StartSpinOff(context.Background(), &proto.SpinOffRequest{
 		Macid: MACID, // Every device has its own unique MACID
 	})
 	if err != nil {
@@ -144,46 +205,32 @@ func startSpinOff() {
 	fmt.Println("response from client is: ", resp)
 }
 
-func scanFileToLines(path string) ([]string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+// func PrepareSimulation() error {
+// 	O2File := metadata.LOCALO2IN
+// 	fmt.Println("ecgfile0.csv is:", O2File)
 
-	var lines []string
+// 	// count the number of lines and use this int to loop through the slice
+// 	TotNoOfLines, err := LineCounter(O2File)
+// 	if err != nil {
+// 		log.Fatalf("error during line counting of ECGFILE: %s", err)
+// 	}
+// 	fmt.Println("Total number of lines in file ECGFILE is: ", TotNoOfLines)
 
-	// create a scanner and read in all the lines in the file
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
+// 	allLinesInFile, err := scanFileToLines(O2File)
+// 	if err != nil {
+// 		log.Fatalf("Could not count lines, %s ", err)
+// 	}
 
-	return lines, nil
-}
+// 	c := time.Tick(1 * time.Second)
+// 	for range c {
+// 		if chunk >= TotNoOfLines {
+// 			break
+// 		}
 
-//LineCounter returns the number of lines found in the file
-func LineCounter(f string) (int, error) {
-	ecg, err := os.Open(f)
-	if err != nil {
-		log.Fatalf("could not open file to count lines, %s", err)
-	}
-	buf := make([]byte, 32*1024)
-	count := 0
-	lineSep := []byte{'\n'}
+// 		chunk = chunk + freq
+// 		_ = processLines(allLinesInFile, TotNoOfLines, chunk, MACID)
 
-	defer ecg.Close()
+// 	}
 
-	for {
-		c, err := ecg.Read(buf)
-		count += bytes.Count(buf[:c], lineSep)
-
-		switch {
-		case err == io.EOF:
-			return count, nil
-
-		case err != nil:
-			return count, err
-		}
-	}
-}
+// 	return nil
+// }
