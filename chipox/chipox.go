@@ -27,12 +27,16 @@ var chipox1 proto.BlockchainClient
 
 // DeviceDataOutputFile contains the data from the Chipox device
 const DeviceDataOutputFile = metadata.LOCALECG1OUT
-const freq = 500
-const offSet = -freq
 
-var chunk = 0
+var BeginValueOfSlice = 0
+
+//const freq = 500
+//const offSet = -freq
+
+//var chunk = 0
 var dataSlice []byte
-var start = 0
+
+//var start = 0
 
 // Counter is just for showing block number when transferring data blocks
 var Counter int
@@ -55,7 +59,7 @@ func main() {
 
 	files, err := ioutil.ReadDir(metadata.DATADIR)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("No files found in directory, %s", err)
 	}
 
 	// read the file given by Chipox; NOTE: clean this file out after every run
@@ -103,19 +107,18 @@ func ReadDataFromFile(filename string) error {
 	//strings.Replace(input, "\r?\n?", "@", -1)
 	// data := lines[offSet+chunk : chunk] // 1st round (-500 + 500) : 500 == 0:500
 
-	beginValueOfSlice := 0
 	c := time.Tick(1 * time.Second)
 	for range c {
 		TotNoOfLines := LineCounter(path)
-		chunkToBeProcessed := TotNoOfLines - beginValueOfSlice
+		chunkToBeProcessed := TotNoOfLines - BeginValueOfSlice
 		fmt.Println("Total number of lines in file ECGFILE is: ", TotNoOfLines)
 		allLinesInFile, err := scanFileToLines(path)
 		if err != nil {
 			log.Fatalf("Could not count lines, %s ", err)
 		}
 
-		_ = ProcessLines(allLinesInFile, TotNoOfLines, chunkToBeProcessed, MACID)
-		beginValueOfSlice = beginValueOfSlice + chunkToBeProcessed
+		_ = ProcessLines(allLinesInFile, TotNoOfLines, BeginValueOfSlice, chunkToBeProcessed, MACID)
+		BeginValueOfSlice = BeginValueOfSlice + chunkToBeProcessed
 
 	}
 
@@ -166,10 +169,10 @@ func LineCounter(f string) int {
 }
 
 // ProcessLines function is used to read a ready file and is not used for life updates
-func ProcessLines(lines []string, fileSize, chunk int, macid string) error {
+func ProcessLines(lines []string, fileSize, beginValueOfSlice, chunkToBeProcessed int, macid string) error {
 	var blockRequests []*proto.AddBlockRequest
 
-	data := lines[offSet+chunk : chunk] // 1st round (-500 + 500) : 500 == 0:500
+	data := lines[beginValueOfSlice:chunkToBeProcessed] // 1st round (-500 + 500) : 500 == 0:500
 
 	dataSliceToAdd := proto.AddBlockRequest{
 		Data:     data,

@@ -10,7 +10,7 @@ package metadata
 var Project = ""
 
 // DATADIR is the directory where the data file is saved from the Chipox device
-const DATADIR = "/Users/hboer/Development/data/"
+const DATADIR = "/c/Users/hboer/Development/data/"
 
 const LOCALECG1IN = "/Users/harryboer/Developer/Dev_Projects/IoMT/ecg/filegenerator/ecgfile1.csv"
 const LOCALECG2IN = "/Users/harryboer/Developer/Dev_Projects/IoMT/ecg/filegenerator/ecgfile2.csv"
