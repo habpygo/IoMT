@@ -80,7 +80,7 @@ func main() {
 			if err := ReadDataFromFile(O2File); err != nil {
 				log.Fatalf("could not read data file from Chipox, %v", err)
 			}
-			// startSpinOff()
+			startSpinOff()
 			// Clean out directory
 			err = RemoveContents(filepath.Dir(metadata.DATADIR))
 			if err != nil {
