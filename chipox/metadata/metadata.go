@@ -20,14 +20,15 @@ const LOCALBLOODPIN = "/Users/harryboer/Developer/Dev_Projects/IoMT/ecg/filegene
 const LOCALO2IN = "/Users/harryboer/Developer/Dev_Projects/IoMT/ecg/filegenerator/Chipox1.csv"
 
 // LOCALECG1OUT is the path in the container; the path is set in the Dockerfile; use for containerized application
-const LOCALECG1OUT = "/app/filevault/Chipox1out.csv"
+//const LOCALECG1OUT = "/app/filevault/Chipox1out.csv"
+const LOCALECG1OUT = "/app/filevault/O2Saturation.csv"
 
 // ------------------------------------------------------
 
 const LOCALECG2OUT = "/app/filevault/ECG2out.csv"
 const LOCALECG3OUT = "/app/filevault/ECG3out.csv"
 const LOCALBLOODPOUT = "/app/filevault/BLOODPressure.csv"
-const LOCALO2OUT = "/app/filevault/Chipox.csv"
+const LOCALO2OUT = "/app/filevault/O2Saturation.csv"
 
 const MAC1 = "00-14-22-01-23-45"
 const MAC2 = "00-04-DC-20-09-11"

@@ -43,7 +43,9 @@ var dataSlice []byte
 var Counter int
 
 // ErrReadSensor is the error message when reading data fails
-var ErrReadSensor = errors.New("failed to read sensor temperature")
+var ErrReadSensor = errors.New("failed to read sensor output")
+
+// O2File is the file created by Chipox
 var O2File string
 
 func main() {
