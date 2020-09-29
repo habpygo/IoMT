@@ -61,7 +61,6 @@ func main() {
 	// create the client; the first chipox device, chipox1
 	chipox1 = proto.NewBlockchainClient(conn)
 
-	// read the file given by Chipox; NOTE: clean this file out after every run
 	for {
 		time.Sleep(10 * time.Second)
 		fmt.Println("file path is: ", filepath.Dir(metadata.DATADIR))
@@ -73,26 +72,25 @@ func main() {
 			fmt.Println("File not yet opened by Chipox")
 			continue
 		} else {
-			O2File := files[0].Name()
-			fmt.Println("Chipox1out.csv is:", O2File)
-			// create the file for this device for writing
-			if err = addFile(DeviceDataOutputFile); err != nil {
-				log.Fatalf("could not create file from device, %s: ", err)
-			}
-			if err := ReadDataFromFile(O2File); err != nil {
-				log.Fatalf("could not read data file from Chipox, %v", err)
-			}
-			if err == io.EOF {
-				startSpinOff()
-				// Clean out directory
-				err = RemoveContents(filepath.Dir(metadata.DATADIR))
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
-				}
-			}
-
+			O2File = files[0].Name()
+			fmt.Println("File found: ", O2File)
+			break
 		}
+	}
+	fmt.Println("Chipox1out.csv is:", O2File)
+	// create the file for this device for writing
+	if err = addFile(DeviceDataOutputFile); err != nil {
+		log.Fatalf("could not create file from device, %s: ", err)
+	}
+	if err := ReadDataFromFile(O2File); err != nil {
+		log.Fatalf("could not read data file from Chipox, %v", err)
+	}
+	startSpinOff()
+	// Clean out directory
+	err = RemoveContents(filepath.Dir(metadata.DATADIR))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
@@ -246,3 +244,37 @@ func RemoveContents(dir string) error {
 	}
 	return nil
 }
+
+// read the file given by Chipox; NOTE: clean this file out after every run
+// for {
+// 	time.Sleep(10 * time.Second)
+// 	fmt.Println("file path is: ", filepath.Dir(metadata.DATADIR))
+// 	files, err := ioutil.ReadDir(filepath.Dir(metadata.DATADIR))
+// 	if err != nil {
+// 		log.Fatalf("Error while reading files in data directory, %s", err)
+// 	}
+// 	if len(files) == 0 {
+// 		fmt.Println("File not yet opened by Chipox")
+// 		continue
+// 	} else {
+// 		O2File := files[0].Name()
+// 		fmt.Println("Chipox1out.csv is:", O2File)
+// 		// create the file for this device for writing
+// 		if err = addFile(DeviceDataOutputFile); err != nil {
+// 			log.Fatalf("could not create file from device, %s: ", err)
+// 		}
+// 		if err := ReadDataFromFile(O2File); err != nil {
+// 			log.Fatalf("could not read data file from Chipox, %v", err)
+// 		}
+// 		if err == io.EOF {
+// 			startSpinOff()
+// 			// Clean out directory
+// 			err = RemoveContents(filepath.Dir(metadata.DATADIR))
+// 			if err != nil {
+// 				fmt.Println(err)
+// 				os.Exit(1)
+// 			}
+// 		}
+
+// 	}
+// }
