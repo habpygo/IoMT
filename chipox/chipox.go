@@ -82,6 +82,7 @@ func main() {
 	if err = addFile(DeviceDataOutputFile); err != nil {
 		log.Fatalf("could not create file from device, %s: ", err)
 	}
+	fmt.Println("File added: ", DeviceDataOutputFile)
 	if err := ReadDataFromFile(O2File); err != nil {
 		log.Fatalf("could not read data file from Chipox, %v", err)
 	}
@@ -114,19 +115,18 @@ func addFile(fileName string) error {
 func ReadDataFromFile(filename string) error {
 	fmt.Println("Entering the ReadDataFromFile function")
 	path := metadata.DATADIR + filename
-	//data, err := ioutil.ReadFile(O2File)
-	//if err != nil {
-	//log.Fatalf("error is: %s", err)
-	//}
-	//input := string(data)
-	//strings.Replace(input, "\r?\n?", "@", -1)
-	// data := lines[offSet+chunk : chunk] // 1st round (-500 + 500) : 500 == 0:500
+	prevTotLines := 0
 
 	c := time.Tick(1 * time.Second)
 	for range c {
 		TotNoOfLines := LineCounter(path)
+		if prevTotLines == TotNoOfLines {
+			break
+		}
+		prevTotLines = TotNoOfLines
 		chunkToBeProcessed := TotNoOfLines - BeginValueOfSlice
-		fmt.Println("Total number of lines in file ECGFILE is: ", TotNoOfLines)
+		fmt.Println("Total number of lines in file PO2 is: ", TotNoOfLines)
+
 		allLinesInFile, err := scanFileToLines(path)
 		if err != nil {
 			log.Fatalf("Could not count lines, %s ", err)
