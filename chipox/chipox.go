@@ -180,7 +180,7 @@ func LineCounter(f string) int {
 func ProcessLines(lines []string, fileSize, beginValueOfSlice, chunkToBeProcessed int, macid string) error {
 	var blockRequests []*proto.AddBlockRequest
 
-	data := lines[beginValueOfSlice:chunkToBeProcessed] // 1st round (-500 + 500) : 500 == 0:500
+	data := lines[beginValueOfSlice : beginValueOfSlice+chunkToBeProcessed] // 1st round (-500 + 500) : 500 == 0:500
 
 	dataSliceToAdd := proto.AddBlockRequest{
 		Data:     data,
