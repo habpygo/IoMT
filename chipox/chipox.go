@@ -82,12 +82,14 @@ func main() {
 			if err := ReadDataFromFile(O2File); err != nil {
 				log.Fatalf("could not read data file from Chipox, %v", err)
 			}
-			startSpinOff()
-			// Clean out directory
-			err = RemoveContents(filepath.Dir(metadata.DATADIR))
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+			if err == io.EOF {
+				startSpinOff()
+				// Clean out directory
+				err = RemoveContents(filepath.Dir(metadata.DATADIR))
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
 			}
 
 		}
@@ -215,10 +217,12 @@ func ProcessLines(lines []string, fileSize, beginValueOfSlice, chunkToBeProcesse
 }
 
 func startSpinOff() {
+	fmt.Println("Starting SpinOff")
 	resp, err := chipox1.StartSpinOff(context.Background(), &proto.SpinOffRequest{
 		Macid: MACID, // Every device has its own unique MACID
 	})
 	if err != nil {
+		fmt.Println("Error in startSpinOff: ", err)
 	}
 	fmt.Println("response from client is: ", resp)
 }
