@@ -80,11 +80,16 @@ func main() {
 			if err := ReadDataFromFile(O2File); err != nil {
 				log.Fatalf("could not read data file from Chipox, %v", err)
 			}
+			// startSpinOff()
+			// Clean out directory
+			err = RemoveContents(filepath.Dir(metadata.DATADIR))
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
 		}
 	}
-
-	// comment out for PEBL testing
-	// startSpinOff() // Start hashing data file and save it to the postgreSQL or FHIR DB
 }
 
 // addFile will request the gRPC server to safe a temp file where the data will be captured
@@ -216,32 +221,22 @@ func startSpinOff() {
 	fmt.Println("response from client is: ", resp)
 }
 
-// func PrepareSimulation() error {
-// 	O2File := metadata.LOCALO2IN
-// 	fmt.Println("ecgfile0.csv is:", O2File)
-
-// 	// count the number of lines and use this int to loop through the slice
-// 	TotNoOfLines, err := LineCounter(O2File)
-// 	if err != nil {
-// 		log.Fatalf("error during line counting of ECGFILE: %s", err)
-// 	}
-// 	fmt.Println("Total number of lines in file ECGFILE is: ", TotNoOfLines)
-
-// 	allLinesInFile, err := scanFileToLines(O2File)
-// 	if err != nil {
-// 		log.Fatalf("Could not count lines, %s ", err)
-// 	}
-
-// 	c := time.Tick(1 * time.Second)
-// 	for range c {
-// 		if chunk >= TotNoOfLines {
-// 			break
-// 		}
-
-// 		chunk = chunk + freq
-// 		_ = processLines(allLinesInFile, TotNoOfLines, chunk, MACID)
-
-// 	}
-
-// 	return nil
-// }
+// RemoveContent cleans out the directory of chipox once the data have been send
+func RemoveContents(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		err = os.RemoveAll(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
