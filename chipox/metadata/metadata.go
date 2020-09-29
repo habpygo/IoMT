@@ -11,7 +11,7 @@ var Project = ""
 
 // DATADIR is the directory where the data file is saved from the Chipox device
 //const DATADIR = "/c/Users/hboer/Development/IoMT/chipox/data/"
-const DATADIR = "/data/"
+const DATADIR = "data/"
 
 const LOCALECG1IN = "/Users/harryboer/Developer/Dev_Projects/IoMT/ecg/filegenerator/ecgfile1.csv"
 const LOCALECG2IN = "/Users/harryboer/Developer/Dev_Projects/IoMT/ecg/filegenerator/ecgfile2.csv"
