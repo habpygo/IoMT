@@ -22,7 +22,7 @@ import (
 )
 
 // MACID is the unique identifier of the device
-const MACID = "00-14-22-01-23-45"
+const MACID = "00-1B-63-84-32-F8"
 
 var chipox1 proto.BlockchainClient
 
