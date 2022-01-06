@@ -50,9 +50,8 @@ var O2File string
 
 func main() {
 
-	//conn, err := grpc.Dial("localhost:8000", grpc.WithInsecure())
-	fmt.Println("Dialing 83.80.200.16:50000")
-	conn, err := grpc.Dial("83.80.200.16:50000", grpc.WithInsecure())
+	fmt.Println("Dialing ")
+	conn, err := grpc.Dial("", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("cannot dial server, %v", err)
 	}
